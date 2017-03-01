@@ -1,0 +1,37 @@
+Version 1.1 notes:
+
+    - Added maxsim and avgsim possibility. Avgsim finds average similarity of
+    senses, maxsim finds the max similarity. At the moment makes no difference
+    since we find only one sense per word.
+    - Added k-means++ init in clustering algorithm
+
+-------------------------------------------------------------------------------
+Result comments:
+    
+Results are somewhat interesting. Accuracy seems low, but I don't know how to
+calculate it. Currently just doing it "by eye". Feels like calculating accuracy
+is as complex as the whole problem, since we are interested in how close the
+senses of two words are. Hence, trying to find method of calculating performance
+makes no sense.
+
+Since only one text is used to train, the resulting sense similarities make
+sense only in context of the given text. Should use multiple texts to get true
+(neutral) word senses.
+
+Concern: sometimes the word itself is not included in the results, although it
+should be since it's 100% similar. Don't know why yet. Maybe it will get fixed
+with built-in similarity method.
+
+--------------------------------------------------------------------------------
+Plan for next version:
+
+    - Use built-in method for calculating similarity
+    - "Low accuracy but better than random" -> calls for ensemble method.
+    Idea: use ensemble where each classifier learns over different text,
+    use voting.
+    - Add some kind of log while learning to track progress. Otherwise can't
+    tell if something went wrong.
+    - Prepare more texts for learning. Ignore child labour laws.
+    - Note for far future: think of or find way to find optimal cluster number. 
+    
+    

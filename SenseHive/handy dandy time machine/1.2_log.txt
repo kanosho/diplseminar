@@ -1,0 +1,17 @@
+# -*- coding: utf-8 -*-
+Version 1.2 notes:
+
+    - Added built-in method to calculate distance
+    using: https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html
+    - Added prints
+-------------------------------------------------------------------------------
+Result comments:
+
+Word salad
+
+--------------------------------------------------------------------------------
+Plan for next version:
+
+    - Fix formating. čćšđž!
+    - Find reason why "" counts as word. Something wrong in preprocessing.
+    - normalization of words?
