@@ -9,83 +9,56 @@ import numpy as np
 import collections
 import string
 from itertools import izip as zip, count
+import math
 
 class Data:
-    def __init__(self, filename, n=10, p=4, truncate=None):
-        self.text = self.getCompleteWordList(filename)
-        if truncate:
-            self.text = self.text[:truncate]
-        # TODO: lematizirati //MOLEX ?
-        self.vocab = self.getWords()
-        self.occurences = self.occurences(n)
-        #self.occurences = self.splitIntoContexts(n,p)
+    def __init__(self, filename, N=10, truncate=None):
+        f = open(filename, "r")
+        self.text = self.text_to_list(f, truncate)
+        self.vocab = self.get_vocab()
+        self.contexts = self.get_contexts(N)
+        self.to_vectors()
 
-    # Read whole text, split into list of words, ignore new lines and punctuation
-    def getCompleteWordList(self, filename):
-        text = open(filename, "r")
-        mypunctuation = string.punctuation.replace('-', '') # ignore all punctuation except '-'
-        mypunctuation += '0123456789'
-        text = text.read().lower().replace('\n',' ').replace('\t',' ')
-        text = str(text).translate(None, mypunctuation).split(' ') #.translate("čćšđž", "ccsdz") ?
+    def to_vectors(self):
+        for word in self.vocab:
+            for i, context in enumerate(self.contexts[word]):
+                self.contexts[word][i] = [1 if w in context else 0 for w in self.vocab] # one hot
+                
+    # gets context for each word (N-word window)
+    def get_contexts(self, N):
+        n = int(N/2)
+        contexts = dict()
+        for word in self.vocab:
+            contexts[word] = []
+        for i,word in enumerate(self.text):
+            context = self.text[max(0,i-n) : min(i+n,len(self.text))]
+            context.remove(word)
+            contexts[word].append(context)
+                                
+        return contexts
+        
+    # reads file, returns list of words in text
+    def text_to_list(self, f, truncate):
+        mypunctuation = string.punctuation + '0123456789'
+        text = f.read().lower().replace('\n',' ').replace('\t',' ')
+        text = str(text).translate(None, mypunctuation).split(' ')
+        if truncate:
+            text = text[:truncate]
         return text
 
     # Returns list of unique words in text // from most to least common
-    def getWords(self):
+    def get_vocab(self):
         cnt = collections.Counter(self.text)
-        return [c[0] for c in cnt.most_common(len(cnt.keys()))]
-    
-    # get n words for each word as its context
-    # n=size, p=limiter. ex: n=6, p=3:  context = [word1 word2] (word) [word3 word4 word5 word6]
-    # 1/p words before word, (p-1)/p after word
-    def splitIntoContexts(self, n, p):
-        occurences = dict()
-        for word in self.vocab:
-            occurences[word] = []
-            indexes = [i for i,j in zip(count(), self.text) if j==word] # get occurences (index) of word in text
-            for i in indexes:
-                chunk = self.text[max(0, i-n/p):i] +  self.text[i+1:min(i+(p-1)*(n/p), len(self.text))]
-                vector = np.zeros(shape=(len(self.vocab),))
-                for w in chunk:
-                    vector[self.vocab.index(w)] = 1
-                occurences[word].append(vector)
-        # occurences[word] = list of vectors, each vector is one-hot coded words before and after word
-        return occurences
-                        
-    # create list of occurences for each word (from pre-made chunks)
-    def occurences(self, n):
-        chunks = self.splitIntoChunks(n)
-        self.vectors = self.toVectors(chunks)
-        occurences = dict()
-        for word in self.vocab:
-            occurences[word] = []
-        for x in self.vectors:
-            for i in range(len(x)):
-                if x[i]:
-                    occurences[self.vocab[i]].append(x)
-        return occurences
+        vocab = [c[0] for c in cnt.most_common(len(cnt.keys()))]
+        #TF = [float(c[1])/len(self.text) for c in cnt.most_common(len(cnt.keys()))]
+        #IDF = math.log() #need more files
+        return vocab
 
-    # Splits list of words into lists of n words
-    def splitIntoChunks(self, n=10):
-        chunks = []
-        for i in range(0, len(self.text), n):
-            chunks.append(self.text[i:i+n])
-        return chunks        
-
-    # Transform chunks into vectors of length len(vocab) //one-hot
-    def toVectors(self, chunks):
-        temp = []
-        n = len(self.vocab)
-        for sentence in chunks:
-            newVector = np.zeros(shape=(n,))
-            for word in sentence:
-                newVector[self.vocab.index(word)] = 1
-            temp.append(newVector)
-        return temp
 
 if __name__ == "__main__":
-    dataset = Data("picard.txt")
+    dataset = Data("data\picard.txt")
     print dataset.vocab[:10]
-    print len(dataset.occurences[dataset.vocab[0]]), len(dataset.occurences[dataset.vocab[-1]])
+    print len(dataset.contexts[dataset.vocab[0]]), len(dataset.contexts[dataset.vocab[-1]])
 
 
 

@@ -1,0 +1,5 @@
+Ivana	obožava	putovati	bez	prtljage	i	bez	prijevoza	.
+N	V	V	S	N	C	S	N	Z
+Elp	Pred	Atv	Prep	Obj	Co	Prep	Adv	Punc
+0	0	2	6	4	0	6	7	0
+
