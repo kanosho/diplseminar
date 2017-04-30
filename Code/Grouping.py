@@ -3,69 +3,66 @@ import numpy as np
 import scipy as sp
 import math
 import codecs
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
+from sklearn.metrics.pairwise import cosine_similarity
 from spherecluster import VonMisesFisherMixture
-from textToVector import Data
+from textToVector_temp import Data
 
 # Multi-Prototype Vector-Space Model
 class MPVSM:
-    def __init__(self):
+    def __init__(self, K=1):
+        self.K=K
         self.dataset = None
         self.senses = dict()
-        
-    # only one sense per word for now
-    # TODO: smart way to find ideal # of clusters
-    def get_best_K(self):
-        return 1
+        self.temp_vocab = []
 
     # for each word in vocabulary, cluster contexts.
     # every centroid then represents a sense; multiple senses per word
     def get_senses(self):
         for word in self.dataset.vocab:
-            X = self.dataset.contexts[word]
-            if len(X) >= self.get_best_K():
-                vmf_soft = VonMisesFisherMixture(n_clusters=self.get_best_K(),
-                                                 posterior_type='soft').fit(X)
-                self.senses[word] = vmf_soft.cluster_centers_
+            X = np.array(self.dataset.contexts[word])
+            if len(X)>= 1:
+                #vmf_soft = VonMisesFisherMixture(n_clusters=self.K, posterior_type='soft').fit(X)
+                kmeans = MiniBatchKMeans(n_clusters=self.K, init='k-means++').fit(X)
+                self.senses[word] = kmeans.cluster_centers_
+                self.temp_vocab.append(word)
+                
             
     # find n most similar words to given word (target)
-    # TODO: some smarter way
     def find_similar(self, target, n, mode='AVG'):
-        distances = []
-        target_senses = self.senses[target]
+        X = self.senses[target]
+        D = []
+        for word in self.temp_vocab:
+            Y = self.senses[word]
+            sim = cosine_similarity(X,Y)
+            if mode == 'AVG':
+                sim = sum(sim)/(len(X)*len(Y))
+            elif mode == 'MAX':
+                sim = max(sim)
+            D.append(sim[0])
 
-        similarity = lambda u,v: np.dot(u, v)/(math.sqrt(np.dot(u, u)) * math.sqrt(np.dot(v, v)))
-        for word in self.dataset.vocab:
-            similarities = [similarity(u,v) for u in target_senses for v in self.senses[word]]
-            if mode=='AVG':
-                sim = sum(similarities)/len(target_senses)**2
-            elif mode=='MAX':
-                sim = max(similarities)
-            distances.append(sim)
-
-        mostSimilar = list(np.array(self.dataset.vocab)[np.argsort(distances)[-n-1:]])
+        mostSimilar = list(np.array(self.temp_vocab)[np.argsort(D)[-n-1:]])
         mostSimilar.remove(target)
-        return mostSimilar[::-1] #!!!!!!!!!!!!!!!
+        return mostSimilar[::-1]
 
     # get n random words, print m most similar
     def test(self, n, m, mode):
         #out = codecs.open('out.txt', 'w')
         #out.write("TEST: "+str(n)+" random words, "+str(m)+" most similar\n\n")
         print "TEST: "+str(n)+" random words, "+str(m)+" most similar\n\n"
-        sample = np.random.choice(self.dataset.vocab[50:500], n)
+        sample = np.random.choice(self.temp_vocab[50:500], n)
         for word in sample:
             similar = model.find_similar(word, m, mode)
             #out.write('['+word+']' + '\n' + ' '.join(similar)+'\n\n')
-            print '['+word+']' + '\n' + ' '.join(similar)+'\n'
+            print '[',word,']','\n',' '.join(similar),'\n'
         #out.close()
 
   
 if __name__ == "__main__":
 
     model = MPVSM()
-    #model.dataset = Data("data/Picard.txt") # for fast testing. text too short for meaningful results
     # options: picard.txt, nahodi.txt, 1984.txt
-    model.dataset = Data("data/nahodi.txt", N=10, truncate=30000) # must truncate because memory error :<
+    model.dataset = Data("data/hrv/nahodi.txt", N=10) # must truncate because memory error :<
     print "10 most common words:", ', '.join(model.dataset.vocab[:10])
     model.get_senses()
     model.test(20, 5, 'MAX')
