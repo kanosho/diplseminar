@@ -6,13 +6,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 def read_data(filename):
     f = open(filename, 'r')
     model = MPVSM()
-    word = f.readline()
+    word = f.readline().replace('\n','')
     model.senses[word]=[]
     model.temp_vocab.append(word)
     counting = True
     K = 0
     while True:
-        line = f.readline()
+        line = f.readline().replace('\n','')
         line = line.split(' ')
         if line[0] == '$':
             if counting: K += 1
@@ -23,8 +23,10 @@ def read_data(filename):
         else:
             word = line[0]
             model.temp_vocab.append(word)
-            self.K = K
-            counting = False
+            model.senses[word] = []
+            if counting:
+                model.K = K
+                counting = False
     return model
 
 # find n most similar words to given word (target)
@@ -40,7 +42,7 @@ def find_similar(model, target, n, mode='AVG'):
             sim = max(sim)
         D.append(sim[0])
 
-    mostSimilar = list(np.array(self.temp_vocab)[np.argsort(D)[-n-1:]])
+    mostSimilar = list(np.array(model.temp_vocab)[np.argsort(D)[-n-1:]])
     mostSimilar.remove(target)
     return mostSimilar[::-1]
 
@@ -57,5 +59,5 @@ def test(model, n, m, mode):
         print '[',word,']','\n',' '.join(similar),'\n'
         
 if __name__ == "__main__":
-    model = read_data('data\centroids')
+    model = read_data('data/centroids')
     test(model, 20, 5, 'MAX')
